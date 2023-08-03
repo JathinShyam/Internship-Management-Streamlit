@@ -8,7 +8,8 @@ import smtplib
 from email_validator import validate_email, EmailNotValidError
 from email.mime.text import MIMEText
 import re
-import pdb
+import hashlib
+#import pdb
 
 
 # Hardcoded login credentials (for demonstration purposes)
@@ -29,6 +30,42 @@ def create_table():
                  gpa REAL, skills TEXT, why_internship TEXT, interested_in_full_time INTEGER, resume BLOB)''')
     conn.commit()
     conn.close()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def create_users_table():
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY,
+                    username TEXT UNIQUE,
+                    password TEXT
+                )''')
+    conn.commit()
+    conn.close()
+
+
+def authenticate_user(username, password):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+
+    # Retrieve the hashed password for the given username from the database
+    c.execute("SELECT password FROM users WHERE username=?", (username,))
+    result = c.fetchone()
+    conn.close()
+
+    if result is None:
+        return False
+    else:
+        # Check if the hashed password matches the provided password
+        hashed_password = result[0]
+        if hashed_password == hash_password(password):
+            return True
+        else:
+            return False
+
 
 def is_valid_email(email):
     try:
@@ -69,18 +106,39 @@ def create_new_user():
     st.subheader("Create New User")
 
     # Input fields for creating a new user
-    username = st.text_input("Username (mandatory)", max_chars=100)
-    password = st.text_input("Password (mandatory)", max_chars=100, type="password")
-
+    new_username = st.text_input("Username")
+    new_password = st.text_input("Password", type="password")
+    confirm_password = st.text_input("Confirm Password", type="password")
+    
     if st.button("Create User"):
-        if not username or not password:
-            st.error("Please fill in both username and password.")
+        if new_username.strip() == "" or new_password.strip() == "":
+            st.warning("Username and password cannot be empty.")
+        elif new_password != confirm_password:
+            st.error("Passwords do not match.")
         else:
             conn = sqlite3.connect("users.db")
             c = conn.cursor()
-            c.execute('''INSERT INTO users (username, password) VALUES (?, ?)''', (username, password))
-            conn.commit()
-            conn.close()
+            
+            # Check if the username already exists
+            c.execute("SELECT COUNT(*) FROM users WHERE username=?", (new_username,))
+            result = c.fetchone()
+            if result[0] > 0:
+                st.error("Username is already taken. Please choose a different username.")
+            else:
+                # Hash the password before storing it in the database
+                hashed_password = hash_password(new_password)
+                
+                # Insert the new user into the database
+                c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (new_username, hashed_password))
+                conn.commit()
+                conn.close()
+
+                st.success("User created successfully. You can now login with the new account.")
+                # Clear the input fields after successful user creation
+                st.text_input("Username", value="")
+                st.text_input("Password", value="")
+                st.text_input("Confirm Password", value="")
+
 
 
 def send_email_to_student(email, name):
@@ -182,12 +240,14 @@ def view_applications_old():
     # Input fields for filtering applications
     filter_year = st.number_input("Filter by Year of Studying", min_value=1, max_value=5)
     filter_cgpa = st.number_input("Filter by CGPA", min_value=0.0, max_value=10.0, step=0.1)
+    year_of_studying_options = ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduated"]
+    year_of_studying = st.selectbox("Year of Studying:", year_of_studying_options)
     #filter_skills = st.text_input("Filter by Skills")
-    pdb.set_trace()
+    #pdb.set_trace()
     # SQL query for filtering applications
     query = "SELECT * FROM applications WHERE 1=1"
     if filter_year:
-        query += f" AND year_of_studying = {filter_year}"
+        query += f" AND year_of_studying = {year_of_studying}"
     if filter_cgpa:
         query += f" AND gpa >= {filter_cgpa}"
     # if filter_skills:
@@ -298,11 +358,9 @@ def view_applications_new():
 
 
 
-
-
-
 def main():
     create_table()
+    create_users_table()
 
     st.title("Student Internship Application Management")
 
@@ -342,19 +400,21 @@ def main():
             insert_data(name, email, university, major, year_of_studying, semester, gpa, skills, why_internship, interested_in_full_time, resume_file)
             st.success("Application submitted successfully!")
 
-
+        
     elif menu_selection == "View Applications":
-        st.header("View Submitted Applications")
-        # skill_filter = st.text_input("Filter by Skill (Optional)")
-        login_username = st.text_input("Username:")
-        login_password = st.text_input("Password:", type="password")
+        # User Authentication
+        st.subheader("Login to Access View Applications")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
 
         if st.button("Login"):
-            if login_username == VALID_USERNAME and login_password == VALID_PASSWORD:
+            if authenticate_user(username, password):
+                st.success(f"Welcome, {username}! You can now access the View Applications section.")
                 display_applications()
             else:
                 st.error("Invalid username or password. Please try again.")
-        
+
+
 
     elif menu_selection == "Create New User":
         create_new_user()
