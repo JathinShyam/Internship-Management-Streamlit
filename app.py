@@ -5,139 +5,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import smtplib
-from email_validator import validate_email, EmailNotValidError
-from email.mime.text import MIMEText
-import re
-import hashlib
 #import pdb
+import os
+from inserting_data import *
+from displaying_applications import *
+from creating_new_user import *
+from sorting import view_applications_old
+from modelling import *
+st.set_page_config(layout="wide")
 
-
-# Hardcoded login credentials (for demonstration purposes)
-VALID_USERNAME = "admin"
-VALID_PASSWORD = "password"
 
 # Email settings (for demonstration purposes)
 SMTP_SERVER = "smtp.example.com"  # Replace with your SMTP server address
 SMTP_PORT = 587  # Replace with your SMTP server port number
 SMTP_USERNAME = "your_username"  # Replace with your email account's username or email address
 SMTP_PASSWORD = "your_password"  # Replace with your email account's password
-
-def create_table():
-    conn = sqlite3.connect("internship_applications.db")
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS applications
-                 (name TEXT, email TEXT, university TEXT, major TEXT, year_of_studying TEXT, semester INTEGER,
-                 gpa REAL, skills TEXT, why_internship TEXT, interested_in_full_time INTEGER, resume BLOB)''')
-    conn.commit()
-    conn.close()
-
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-def create_users_table():
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY,
-                    username TEXT UNIQUE,
-                    password TEXT
-                )''')
-    conn.commit()
-    conn.close()
-
-
-def authenticate_user(username, password):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-
-    # Retrieve the hashed password for the given username from the database
-    c.execute("SELECT password FROM users WHERE username=?", (username,))
-    result = c.fetchone()
-    conn.close()
-
-    if result is None:
-        return False
-    else:
-        # Check if the hashed password matches the provided password
-        hashed_password = result[0]
-        if hashed_password == hash_password(password):
-            return True
-        else:
-            return False
-
-
-def is_valid_email(email):
-    try:
-        validate_email(email)
-        return True
-    except EmailNotValidError:
-        return False
-
-# def is_valid_email(email):
-#     # Regex pattern for email validation
-#     pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
-#     return re.match(pattern, email)
-
-
-def insert_data(name, email, university, major, year_of_studying, semester, gpa, skills, why_internship, interested_in_full_time, resume):
-    if not name or not email or not university or not major or not year_of_studying or not semester or not gpa or not skills or not resume:
-        st.error("Please fill in all mandatory fields and upload your resume.")
-    else:
-        conn = sqlite3.connect("internship_applications.db")
-        c = conn.cursor()
-        c.execute("INSERT INTO applications (name, email, university, major, year_of_studying, semester, gpa, skills, why_internship, interested_in_full_time, resume) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                  (name, email, university, major, year_of_studying, semester, gpa, skills, why_internship, interested_in_full_time, resume))
-        conn.commit()
-        conn.close()
-        st.success("Application submitted successfully!")
-
-
-
-# def create_new_user(username, password):
-#     conn = sqlite3.connect("users.db")
-#     c = conn.cursor()
-#     c.execute('''INSERT INTO users (username, password) VALUES (?, ?)''', (username, password))
-#     conn.commit()
-#     conn.close()
-
-
-def create_new_user():
-    st.subheader("Create New User")
-
-    # Input fields for creating a new user
-    new_username = st.text_input("Username")
-    new_password = st.text_input("Password", type="password")
-    confirm_password = st.text_input("Confirm Password", type="password")
-    
-    if st.button("Create User"):
-        if new_username.strip() == "" or new_password.strip() == "":
-            st.warning("Username and password cannot be empty.")
-        elif new_password != confirm_password:
-            st.error("Passwords do not match.")
-        else:
-            conn = sqlite3.connect("users.db")
-            c = conn.cursor()
-            
-            # Check if the username already exists
-            c.execute("SELECT COUNT(*) FROM users WHERE username=?", (new_username,))
-            result = c.fetchone()
-            if result[0] > 0:
-                st.error("Username is already taken. Please choose a different username.")
-            else:
-                # Hash the password before storing it in the database
-                hashed_password = hash_password(new_password)
-                
-                # Insert the new user into the database
-                c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (new_username, hashed_password))
-                conn.commit()
-                conn.close()
-
-                st.success("User created successfully. You can now login with the new account.")
-                # Clear the input fields after successful user creation
-                st.text_input("Username", value="")
-                st.text_input("Password", value="")
-                st.text_input("Confirm Password", value="")
 
 
 
@@ -152,209 +34,6 @@ def send_email_to_student(email, name):
         st.success(f"Email sent successfully to {name}!")
     except Exception as e:
         st.error(f"Failed to send email to {name}. Error: {str(e)}")
-
-
-def display_applications():
-    conn = sqlite3.connect("internship_applications.db")
-    df = pd.read_sql_query("SELECT * FROM applications", conn)
-    conn.close()
-
-    st.subheader("Applications Overview")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-
-    # Pie chart
-    labels = ["Interested in Full Time", "Not Interested in Full Time"]
-    sizes = [df["interested_in_full_time"].sum(), len(df) - df["interested_in_full_time"].sum()]
-    ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
-    ax1.set_title("Interest in Full-Time")
-
-    # Bar chart of GPA distribution
-    gpa_counts = df["gpa"].value_counts().sort_index()
-    ax2.bar(gpa_counts.index, gpa_counts.values, width=0.4)
-    ax2.set_title("GPA Distribution")
-    ax2.set_xlabel("GPA")
-    ax2.set_ylabel("Count")
-    ax2.set_xticks(range(1, 11))  # Use range from 1 to 10 (inclusive) for GPA
-    ax2.set_xticklabels([f"{i:.1f}" for i in range(1, 11)])  # Set labels for GPA
-    plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-
-    plt.tight_layout()
-    st.pyplot(fig)
-
-    st.subheader("Additional Visualizations")
-    
-    # Count plot for the distribution of year of studying
-    fig, ax = plt.subplots()
-    sns.countplot(data=df, x="year_of_studying")
-    ax.set_xlabel("Year of Studying")
-    ax.set_ylabel("Count")
-    ax.set_title("Distribution of Year of Studying")
-    plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-    st.pyplot(fig)
-
-    # Count plot for the distribution of full-time interest
-    fig, ax = plt.subplots()
-    sns.countplot(data=df, x="interested_in_full_time")
-    ax.set_xlabel("Interested in Full Time")
-    ax.set_ylabel("Count")
-    ax.set_title("Distribution of Interest in Full Time")
-    ax.set_xticks([0, 1])  # Explicitly set the tick positions to 0 and 1
-    ax.set_xticklabels(["No", "Yes"])  # Set custom labels for each tick position
-    plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-    st.pyplot(fig)
-
-    # Display the table with all applications
-    st.subheader("Submitted Applications")
-    st.dataframe(df)
-
-
-    with st.expander("View Resumes (PDF)"):
-        for idx, row in df.iterrows():
-            st.write(f"### Application from {row['name']}")
-            st.write(f"**Email:** {row['email']}")
-            st.write(f"**University:** {row['university']}")
-            st.write(f"**Major:** {row['major']}")
-            st.write(f"**Year of Studying:** {row['year_of_studying']}")
-            st.write(f"**Semester:** {row['semester']}")
-            st.write(f"**GPA:** {row['gpa']:.2f}")
-            st.write(f"**Skills:** {row['skills']}")
-            st.write(f"**Why Internship:** {row['why_internship']}")
-            st.write(f"**Interested in Full Time:** {'Yes' if row['interested_in_full_time'] else 'No'}")
-
-            # View the resume in PDF format
-            st.write("### Resume:")
-            st.write(f"**File Name:** {row['name']}_Resume.pdf")  # Display the file name for the resume
-            if row['resume']:  # Check if the resume is not empty before displaying
-                st.download_button(label="Download Resume PDF", data=row['resume'], file_name=f"{row['name']}_Resume.pdf", mime="application/pdf")
-            else:
-                st.write("No resume uploaded.")
-
-            st.write("---")
-
-    
-def view_applications_old():
-    conn = sqlite3.connect("internship_applications.db")
-
-    st.subheader("View Applications")
-
-    # Input fields for filtering applications
-    filter_year = st.number_input("Filter by Year of Studying", min_value=1, max_value=5)
-    filter_cgpa = st.number_input("Filter by CGPA", min_value=0.0, max_value=10.0, step=0.1)
-    year_of_studying_options = ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduated"]
-    year_of_studying = st.selectbox("Year of Studying:", year_of_studying_options)
-    #filter_skills = st.text_input("Filter by Skills")
-    #pdb.set_trace()
-    # SQL query for filtering applications
-    query = "SELECT * FROM applications WHERE 1=1"
-    if filter_year:
-        query += f" AND year_of_studying = {year_of_studying}"
-    if filter_cgpa:
-        query += f" AND gpa >= {filter_cgpa}"
-    # if filter_skills:
-    #     query += f" AND skills LIKE '%{filter_skills}%'"
-
-    # Input field for sorting applications
-    # sort_by = st.selectbox("Sort Applications by", ["Name", "GPA", "Year of Studying"])
-
-    # # SQL query for sorting applications
-    # if sort_by == "Name":
-    #     query += " ORDER BY name"
-    # elif sort_by == "GPA":
-    #     query += " ORDER BY gpa DESC"
-    # elif sort_by == "Year of Studying":
-    #     query += " ORDER BY year_of_studying"
-
-    # Execute the query and fetch the filtered and sorted applications
-    df = pd.read_sql_query(query, conn)
-
-    if df.empty:
-        st.warning("No applications found matching the filter criteria.")
-    else:
-        for idx, row in df.iterrows():
-            # Display application details
-            st.write(f"### Application from {row['name']}")
-            st.write(f"**Email:** {row['email']}")
-            st.write(f"**University:** {row['university']}")
-            st.write(f"**Major:** {row['major']}")
-            st.write(f"**Year of Studying:** {row['year_of_studying']}")
-            st.write(f"**Semester:** {row['semester']}")
-            st.write(f"**GPA:** {row['gpa']:.2f}")
-            st.write(f"**Skills:** {row['skills']}")
-            st.write(f"**Why Internship:** {row['why_internship']}")
-            st.write(f"**Interested in Full Time:** {'Yes' if row['interested_in_full_time'] else 'No'}")
-
-            # View the resume in PDF format
-            st.write("### Resume:")
-            st.write(f"**File Name:** {row['name']}_Resume.pdf")  # Display the file name for the resume
-            if row['resume']:  # Check if the resume is not empty before displaying
-                st.download_button(label="Download Resume PDF", data=row['resume'], file_name=f"{row['name']}_Resume.pdf", mime="application/pdf")
-            else:
-                st.write("No resume uploaded.")
-
-            st.write("---")
-
-    conn.close()
-  
-
-
-def view_applications_new():
-    conn = sqlite3.connect("internship_applications.db")
-
-    st.subheader("View Applications")
-
-    # Input fields for filtering applications
-    filter_year = st.number_input("Filter by Year of Studying", min_value=1, max_value=5)
-    filter_cgpa = st.number_input("Filter by CGPA", min_value=0.0, max_value=10.0, step=0.1)
-    filter_skills = st.text_input("Filter by Skills")
-
-    # SQL query for filtering applications
-    query = "SELECT * FROM applications WHERE 1=1"
-    if filter_year:
-        query += f" AND year_of_studying = {filter_year}"
-    if filter_cgpa:
-        query += f" AND gpa >= {filter_cgpa}"
-    if filter_skills:
-        query += f" AND skills LIKE '%{filter_skills}%'"
-
-    # Input field for sorting applications
-    sort_by_options = ["Name", "GPA", "Year of Studying"]
-    sort_by = st.multiselect("Sort Applications by", sort_by_options)
-
-    # SQL query for sorting applications
-    if sort_by:
-        query += f" ORDER BY {', '.join(sort_by)}"
-
-    # Execute the query and fetch the filtered and sorted applications
-    df = pd.read_sql_query(query, conn)
-
-    if df.empty:
-        st.warning("No applications found matching the filter criteria.")
-    else:
-        for idx, row in df.iterrows():
-            # Display application details
-            st.write(f"### Application from {row['name']}")
-            st.write(f"**Email:** {row['email']}")
-            st.write(f"**University:** {row['university']}")
-            st.write(f"**Major:** {row['major']}")
-            st.write(f"**Year of Studying:** {row['year_of_studying']}")
-            st.write(f"**Semester:** {row['semester']}")
-            st.write(f"**GPA:** {row['gpa']:.2f}")
-            st.write(f"**Skills:** {row['skills']}")
-            st.write(f"**Why Internship:** {row['why_internship']}")
-            st.write(f"**Interested in Full Time:** {'Yes' if row['interested_in_full_time'] else 'No'}")
-
-            # View the resume in PDF format
-            st.write("### Resume:")
-            st.write(f"**File Name:** {row['name']}_Resume.pdf")  # Display the file name for the resume
-            if row['resume']:  # Check if the resume is not empty before displaying
-                st.download_button(label="Download Resume PDF", data=row['resume'], file_name=f"{row['name']}_Resume.pdf", mime="application/pdf")
-            else:
-                st.write("No resume uploaded.")
-
-            st.write("---")
-
-    conn.close()
-
 
 
 
@@ -372,6 +51,7 @@ def main():
         st.write("Please use the navigation sidebar to access different features.")
 
     elif menu_selection == "Submit Application":
+
         st.header("Student Internship Application Form")
         st.write("Please fill in the following details to apply for the internship:")
 
@@ -398,7 +78,7 @@ def main():
 
         if st.button("Submit"):
             insert_data(name, email, university, major, year_of_studying, semester, gpa, skills, why_internship, interested_in_full_time, resume_file)
-            st.success("Application submitted successfully!")
+            
 
         
     elif menu_selection == "View Applications":
@@ -408,12 +88,14 @@ def main():
         password = st.text_input("Password", type="password")
 
         if st.button("Login"):
-            if authenticate_user(username, password):
+            if username==VALID_USERNAME and password==VALID_PASSWORD:
+                st.success(f"Welcome, {username}! You can now access the View Applications section.")
+                display_applications() 
+            elif authenticate_user(username, password):
                 st.success(f"Welcome, {username}! You can now access the View Applications section.")
                 display_applications()
             else:
                 st.error("Invalid username or password. Please try again.")
-
 
 
     elif menu_selection == "Create New User":
