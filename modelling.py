@@ -5,10 +5,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import smtplib
 import hashlib
+from new import *
 
 # Hardcoded login credentials (for demonstration purposes)
 VALID_USERNAME = "admin"
 VALID_PASSWORD = "password"
+
+
+
 
 def create_table():
     conn = sqlite3.connect("internship_applications.db")
@@ -19,7 +23,10 @@ def create_table():
     conn.commit()
     conn.close()
 
-
+# def create_table_new():
+#     worksheet = authenticate_google_sheets()
+#     headers = ['name', 'email', 'university', 'major', 'year_of_studying', 'semester', 'gpa', 'skills', 'why_internship', 'interested_in_full_time', 'resume']
+#     worksheet.append_row(headers)
 
 def create_users_table():
     conn = sqlite3.connect("users.db")

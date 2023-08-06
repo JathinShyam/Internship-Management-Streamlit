@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import hashlib
+from inserting_data import *
+
 
 
 def hash_password(password):
@@ -24,7 +26,10 @@ def create_new_user():
         elif new_password != confirm_password:
             st.error("Passwords do not match.")
         else:
-            conn = sqlite3.connect("users.db")
+            global conn
+            if not conn:
+                conn = create_connection("users.db")
+            # conn = sqlite3.connect("users.db")
             c = conn.cursor()
             
             # Check if the username already exists

@@ -3,44 +3,20 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-
+from emailing import *
+import math
+from inserting_data import *
 
 def display_applications():
-    conn = sqlite3.connect("internship_applications.db")
+
+    global conn
+    if not conn:
+        conn = create_connection("internship_applications.db")
+
     df = pd.read_sql_query("SELECT * FROM applications", conn)
     conn.close()
 
     st.subheader("Applications Overview")
-
-
-
-        # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-
-        # # Pie chart
-        # labels = ["Interested in Full Time", "Not Interested in Full Time"]
-        # sizes = [df["interested_in_full_time"].sum(), len(df) - df["interested_in_full_time"].sum()]
-        # ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
-        # ax1.set_title("Interest in Full-Time")
-
-    
-        # # Bar chart of GPA distribution
-        # gpa_counts = df["gpa"].value_counts().sort_index()
-        # ax2.bar(gpa_counts.index, gpa_counts.values, width=0.4)
-        # ax2.set_title("GPA Distribution")
-        # ax2.set_xlabel("GPA")
-        # ax2.set_ylabel("Count")
-        # ax2.set_xticks(range(1, 11))  # Use range from 1 to 10 (inclusive) for GPA
-        # ax2.set_xticklabels([f"{i:.1f}" for i in range(1, 11)])  # Set labels for GPA
-        # plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
-
-        # plt.tight_layout()
-        # st.pyplot(fig)
-
-        # st.subheader("Additional Visualizations")
-
-
-
 
 
     # Data preparation for the pie chart
@@ -113,10 +89,44 @@ def display_applications():
 
     # Display the table with all applications
     st.subheader("Submitted Applications")
-    st.dataframe(df)
+    st.dataframe(df[:-1])
 
 
     with st.expander("View Resumes (PDF)"):
+
+        # if st.button("Filter"):
+
+        #     filter_cgpa = st.number_input("Filter by CGPA", min_value=0.0, max_value=10.0, step=0.1)
+        #     year_of_studying_options = ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduated"]
+        #     year_of_studying = st.selectbox("Year of Studying:", year_of_studying_options)
+        #     filter_skills = st.text_input("Filter by Skills")
+
+        #     # SQL query for filtering applications
+        #     query = "SELECT * FROM applications WHERE 1=1"
+        #     if filter_cgpa:
+        #         query += f" AND gpa >= {filter_cgpa}"
+        #     if year_of_studying:
+        #             query += f" AND year_of_studying = '{year_of_studying}'"
+        #     if filter_skills:
+        #         query += f" AND skills LIKE '%{filter_skills}%'"
+
+        #     conn = sqlite3.connect("internship_applications.db")
+        #     df = pd.read_sql_query(query, conn)
+        #     conn.close()
+        # else:
+        #     conn = sqlite3.connect("internship_applications.db")
+        #     df = pd.read_sql_query("SELECT * FROM applications", conn)
+        #     conn.close()
+
+        # # Pagination
+        # page_size = 5
+        # num_pages = math.ceil(len(df) / page_size)
+
+        # page_number = st.number_input("Page Number", min_value=1, max_value=num_pages, value=1)
+        # start_idx = (page_number - 1) * page_size
+        # end_idx = start_idx + (len(df) % page_size) + 1
+
+        # for idx, row in df.iloc[start_idx:end_idx].iterrows():
         for idx, row in df.iterrows():
             st.write(f"### Application from {row['name']}")
             st.write(f"**Email:** {row['email']}")
@@ -136,5 +146,10 @@ def display_applications():
                 st.download_button(label="Download Resume PDF", data=row['resume'], file_name=f"{row['name']}_Resume.pdf", mime="application/pdf")
             else:
                 st.write("No resume uploaded.")
+
+            if row['email']:
+                if st.button(f"Send Email to {row['name']}"):  # Use idx as a part of the key for the button
+                    send_email(row['email'], f"Regarding Your Internship Application", f"Dear {row['name']},\n\nWe have reviewed your internship application and would like to thank you for applying. Your application has been received and is currently under review.\n\nBest Regards,\nThe Internship Team")
+                    st.success("Email sent successfully!")
 
             st.write("---")

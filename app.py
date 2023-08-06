@@ -10,9 +10,33 @@ import os
 from inserting_data import *
 from displaying_applications import *
 from creating_new_user import *
-from sorting import view_applications_old
+from sorting import *
 from modelling import *
 st.set_page_config(layout="wide")
+
+
+import logging
+import os
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Check if the 'logs' directory exists, if not create it
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+# Set up a file handler to log messages to a file
+file_handler = logging.FileHandler('logs/app.log')
+file_handler.setLevel(logging.INFO)
+
+# Create a formatter for the file handler
+file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(file_formatter)
+
+# Add the file handler to the root logger
+logging.getLogger().addHandler(file_handler)
+
+
 
 
 # Email settings (for demonstration purposes)
@@ -36,15 +60,16 @@ def send_email_to_student(email, name):
         st.error(f"Failed to send email to {name}. Error: {str(e)}")
 
 
-
 def main():
     create_table()
+    # create_table_new()
     create_users_table()
+
 
     st.title("Student Internship Application Management")
 
     menu_selection = st.sidebar.selectbox("Select an option:", 
-                                          ["Home", "Submit Application", "View Applications", "Create New User", "View Applications New"])
+                                          ["Home", "Submit Application", "View Applications", "Create New User", "Filtering"])
 
     if menu_selection == "Home":
         st.header("Welcome to the Internship Application Management App!")
@@ -101,8 +126,25 @@ def main():
     elif menu_selection == "Create New User":
         create_new_user()
     
-    elif menu_selection=="View Applications New":
-        view_applications_old()
+    elif menu_selection=="Filtering":
+
+        # # User Authentication
+        # st.subheader("Login to Access View Applications")
+        # username = st.text_input("Username")
+        # password = st.text_input("Password", type="password")
+
+        # if st.button("Login"):
+        #     if username==VALID_USERNAME and password==VALID_PASSWORD:
+        #         st.success(f"Welcome, {username}! You can now access the View Applications section.")
+        #         filtering_sorting() 
+        #     elif authenticate_user(username, password):
+        #         st.success(f"Welcome, {username}! You can now access the View Applications section.")
+        #         filtering_sorting()
+        #     else:
+        #         st.error("Invalid username or password. Please try again.")
+
+        filtering_sorting()
+        
 
 
 if __name__ == "__main__":
