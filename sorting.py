@@ -83,9 +83,10 @@ def filtering_sorting():
 
             if row['email']:
                 if st.button(f"Send Email {idx}"):  # Use idx as a part of the key for the button
-                    send_email(row['email'], f"Regarding Your Internship Application", f"Dear {row['name']},\n\nWe have reviewed your internship application and would like to thank you for applying. Your application has been received and is currently under review.\n\nBest Regards,\nThe Internship Team")
-                    st.success("Email sent successfully!")
+                    # send_email(row['email'], f"Regarding Your Internship Application", f"Dear {row['name']},\n\nWe have reviewed your internship application and would like to thank you for applying. Your application has been received and is currently under review.\n\nBest Regards,\nThe Internship Team")
+                    # st.success("Email sent successfully!")
                     
+                    send_email_to_student(row["email"], row["name"])
             st.write("---")
 
     

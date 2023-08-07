@@ -6,14 +6,14 @@ import seaborn as sns
 from emailing import *
 import math
 from inserting_data import *
+from sorting import *
+
 
 def display_applications():
 
-    global conn
-    if not conn:
-        conn = create_connection("internship_applications.db")
-
-    df = pd.read_sql_query("SELECT * FROM applications", conn)
+    conn = create_connection("internship_applications.db")
+    query = "SELECT * FROM applications WHERE 1=1"
+    df = pd.read_sql_query(query, conn)
     conn.close()
 
     st.subheader("Applications Overview")
@@ -143,13 +143,14 @@ def display_applications():
             st.write("### Resume:")
             st.write(f"**File Name:** {row['name']}_Resume.pdf")  # Display the file name for the resume
             if row['resume']:  # Check if the resume is not empty before displaying
-                st.download_button(label="Download Resume PDF", data=row['resume'], file_name=f"{row['name']}_Resume.pdf", mime="application/pdf")
+                download_url = get_download_link(row['resume'], f"{row['name']}_Resume.pdf", "Download Resume PDF")
+                st.markdown(download_url, unsafe_allow_html=True)
             else:
                 st.write("No resume uploaded.")
-
-            if row['email']:
-                if st.button(f"Send Email to {row['name']}"):  # Use idx as a part of the key for the button
-                    send_email(row['email'], f"Regarding Your Internship Application", f"Dear {row['name']},\n\nWe have reviewed your internship application and would like to thank you for applying. Your application has been received and is currently under review.\n\nBest Regards,\nThe Internship Team")
-                    st.success("Email sent successfully!")
-
+            # if row['email']:
+            #     if st.button(f"Send Email {idx}"):  # Use idx as a part of the key for the button
+            #         # send_email(row['email'], f"Regarding Your Internship Application", f"Dear {row['name']},\n\nWe have reviewed your internship application and would like to thank you for applying. Your application has been received and is currently under review.\n\nBest Regards,\nThe Internship Team")
+            #         # st.success("Email sent successfully!")
+                    
+            #         send_email_to_student(row["email"], row["name"])
             st.write("---")

@@ -39,27 +39,6 @@ logging.getLogger().addHandler(file_handler)
 
 
 
-# Email settings (for demonstration purposes)
-SMTP_SERVER = "smtp.example.com"  # Replace with your SMTP server address
-SMTP_PORT = 587  # Replace with your SMTP server port number
-SMTP_USERNAME = "your_username"  # Replace with your email account's username or email address
-SMTP_PASSWORD = "your_password"  # Replace with your email account's password
-
-
-
-def send_email_to_student(email, name):
-    message = f"Dear {name},\n\nCongratulations! You have been selected for the internship due to your high GPA.\n\nBest regards,\nThe Internship Team"
-    
-    try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.sendmail(SMTP_USERNAME, email, message)
-        st.success(f"Email sent successfully to {name}!")
-    except Exception as e:
-        st.error(f"Failed to send email to {name}. Error: {str(e)}")
-
-
 def main():
     create_table()
     # create_table_new()
